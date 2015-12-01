@@ -1,6 +1,8 @@
 import 'dart:io';
 
-int GAME_SERVER_PORT = 7777;
+// Configuration
+int     GAME_SERVER_PORT = 7777;
+String  WEB_ADDRESS = 'localhost';
 
 
 class Host {
@@ -9,7 +11,7 @@ class Host {
 
   refresh() async {
     // setup websocket
-    ws = await WebSocket.connect('ws://localhost:8080');
+    ws = await WebSocket.connect('ws://$WEB_ADDRESS:8080');
 
     // game server
     game = await Socket.connect("localhost", GAME_SERVER_PORT);
@@ -44,7 +46,7 @@ class Server {
 class Client {
   refresh() async {
     // websockets
-    WebSocket ws = await WebSocket.connect('ws://localhost:8081');
+    WebSocket ws = await WebSocket.connect('ws://$WEB_ADDRESS:8081');
 
     // game client
     ServerSocket game = await ServerSocket.bind('localhost', GAME_SERVER_PORT);
