@@ -1,7 +1,7 @@
 import 'dart:io';
 
 // Configuration
-int     GAME_SERVER_PORT = 7777;
+int     GAME_SERVER_PORT = 25565;
 String  WEB_ADDRESS = 'localhost';
 
 
@@ -10,52 +10,57 @@ class Host {
   WebSocket ws;
 
   refresh() async {
-    // setup websocket
+    //setup websocket
     ws = await WebSocket.connect('ws://$WEB_ADDRESS:8080');
+    print('websocket connected');
 
     // game server
-    game = await Socket.connect("localhost", GAME_SERVER_PORT);
+    game = await Socket.connect('0.0.0.0', GAME_SERVER_PORT);
+    print('game server connected');
 
     // sync
-    ws.listen((data) => game.add(data));
-    game.listen((data) => ws.add(data));
+    ws.listen((data) {
+      print('websocket: ' + new String.fromCharCodes(data));
+      game.add(data);
+    });
+    game.listen((data) {
+      print('game: ' +new String.fromCharCodes(data));
+      ws.add(data);
+    });
   }
 }
 
 class Server {
-  Socket game;
-  WebSocket wsServer;
-  WebSocket wsClient;
 
   refresh() async {
     // websockets
-    HttpServer http = await HttpServer.bind('localhost', 8080);
-    HttpRequest request = await http.first;
-    wsServer = await WebSocketTransformer.upgrade(request);
+    HttpServer http = await HttpServer.bind('0.0.0.0', 8080);
+    http.listen((request) async {
+      WebSocket wsServer = await WebSocketTransformer.upgrade(request);
 
-    http = await HttpServer.bind('localhost', 8081);
-    request = await http.first;
-    wsClient = await WebSocketTransformer.upgrade(request);
+      http = await HttpServer.bind('0.0.0.0', 8081);
+      request = await http.first;
+      http.listen((request) async {
+        WebSocket wsClient = await WebSocketTransformer.upgrade(request);
 
-    // sync
-    wsClient.listen((data) => wsServer.add(data));
-    wsServer.listen((data) => wsClient.add(data));
+        wsClient.listen((data) => wsServer.add(data));
+        wsServer.listen((data) => wsClient.add(data));
+      });
+
+    });
   }
 }
 
 class Client {
   refresh() async {
-    // websockets
-    WebSocket ws = await WebSocket.connect('ws://$WEB_ADDRESS:8081');
-
     // game client
-    ServerSocket game = await ServerSocket.bind('localhost', GAME_SERVER_PORT);
-    Socket gameSocket = await game.first;
-
-    // sync data
-    gameSocket.listen((data) => ws.add(data));
-    ws.listen((data) {
-      gameSocket.add(data);
+    ServerSocket game = await ServerSocket.bind('0.0.0.0', GAME_SERVER_PORT+1);
+    game.listen((socket) async {
+      WebSocket ws = await WebSocket.connect('ws://$WEB_ADDRESS:8081');
+      socket.listen((data) => ws.add(data));
+      ws.listen((data) {
+        socket.add(data);
+      });
     });
   }
 }
